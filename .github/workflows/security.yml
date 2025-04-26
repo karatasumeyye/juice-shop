@@ -1,0 +1,52 @@
+name: Build Docker Image and Generate SBOM
+
+on:
+  push:
+    branches:
+      - main   # sadece main branch'e push olunca çalışır
+
+jobs:
+  build-and-sbom:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Reposunu çek
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Docker için Buildx ortamını kur
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 3. Docker Hub'a login ol
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # 4. Docker image'ı build et ve pushla
+      - name: Build and Push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/juice-shop:latest
+
+      # 5. Syft'ı kur
+      - name: Install Syft
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+
+      # 6. SBOM dosyasını oluştur (spdx-json formatında)
+      - name: Generate SBOM with Syft
+        run: |
+          syft ${{ secrets.DOCKER_USERNAME }}/juice-shop:latest -o spdx-json > sbom.spdx.json
+
+      # 7. SBOM dosyasını artefakt olarak kaydet
+      - name: Upload SBOM as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: juice-shop-sbom
+          path: sbom.spdx.json
+
