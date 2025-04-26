@@ -53,10 +53,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Semgrep'i kur
+      # 2. Semgrep'i kur (pip ile)
       - name: Install Semgrep
         run: |
-          curl -sSfL https://semgrep.dev/install | sh
+          python -m pip install --upgrade pip
+          pip install semgrep
 
       # 3. Semgrep taraması yap ve SARIF formatında çıktı al
       - name: Run Semgrep scan and output in SARIF format
