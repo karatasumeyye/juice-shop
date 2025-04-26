@@ -1,4 +1,4 @@
-name: Build Docker Image and Generate SBOM
+name: Build Docker Image, Generate SBOM, and Run Semgrep
 
 on:
   push:
@@ -45,9 +45,8 @@ jobs:
           name: juice-shop-sbom
           path: sbom.spdx.json
 
-
-semgrep-scan:
-  runs-on: ubuntu-latest
+  semgrep-scan:
+    runs-on: ubuntu-latest
 
     steps:
       # 1. Reposunu tekrar çek (separate job olduğu için tekrarlıyoruz)
@@ -59,14 +58,14 @@ semgrep-scan:
         run: |
           curl -sSfL https://semgrep.dev/install | sh
 
-      # 3. Semgrep taraması yap
-      - name: Run Semgrep scan
+      # 3. Semgrep taraması yap ve SARIF formatında çıktı al
+      - name: Run Semgrep scan and output in SARIF format
         run: |
-          semgrep --config=auto --ignore-stdout > semgrep-results.json
+          semgrep --config=auto --sarif --output=semgrep-results.sarif
 
-      # 4. Semgrep sonuçlarını artefakt olarak kaydet
-      - name: Upload Semgrep Results as Artifact
+      # 4. Semgrep sonuçlarını SARIF formatında artefakt olarak kaydet
+      - name: Upload Semgrep SARIF Results as Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: semgrep-results
-          path: semgrep-results.json
+          name: semgrep-sarif-results
+          path: semgrep-results.sarif
