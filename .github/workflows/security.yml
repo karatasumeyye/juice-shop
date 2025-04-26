@@ -1,4 +1,4 @@
-name: Build Docker Image, Generate SBOM, Run Semgrep and Gitleaks
+name: Build Docker Image, Generate SBOM, Run Semgrep, and Gitleaks
 
 on:
   push:
@@ -24,14 +24,14 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: false
-          load: true
+          push: false         # Buraya dikkat, push=false oldu
+          load: true          # Docker engine içine image yüklensin
           tags: juice-shop:latest
 
       # 4. Syft'ı kur
       - name: Install Syft
         run: |
-          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | bash -s -- -b /usr/local/bin
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
 
       # 5. SBOM dosyasını oluştur
       - name: Generate SBOM with Syft
@@ -47,23 +47,25 @@ jobs:
 
   semgrep-scan:
     runs-on: ubuntu-latest
-    continue-on-error: true  # Bu satırı ekledik, hata alırsa workflow devam eder.
+    
 
     steps:
+      # 1. Reposunu tekrar çek (separate job olduğu için tekrarlıyoruz)
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Bash kullanarak kurulum yapıyoruz
+      # 2. Semgrep'i kur (pip ile)
       - name: Install Semgrep
         run: |
-          curl -sSfL https://github.com/returntocorp/semgrep/releases/latest/download/semgrep-linux-amd64 -o /usr/local/bin/semgrep
-          chmod +x /usr/local/bin/semgrep
+          python -m pip install --upgrade pip
+          pip install semgrep
 
-      # SARIF çıktısı ve strict mode ile Semgrep taraması
-      - name: Run Semgrep scan and output SARIF (strict)
+      # 3. Semgrep taraması yap ve SARIF formatında çıktı al
+      - name: Run Semgrep scan and output in SARIF format
         run: |
-          semgrep --config=auto --sarif --strict --output=semgrep-results.sarif
+          semgrep --config=auto --sarif --output=semgrep-results.sarif
 
+      # 4. Semgrep sonuçlarını SARIF formatında artefakt olarak kaydet
       - name: Upload Semgrep SARIF Results as Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -72,18 +74,28 @@ jobs:
 
   gitleaks-scan:
     runs-on: ubuntu-latest
-    continue-on-error: true  # Bu satırı ekledik, hata alırsa workflow devam eder.
+    
+
+    env:
+      GITLEAKS_SECRET: ${{ secrets.GITLEAKS_SECRET }}  # Gitleaks için secret
 
     steps:
+      # 1. Reposunu tekrar çek (separate job olduğu için tekrarlıyoruz)
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Gitleaks Action'ı doğrudan kullanıyoruz
-      - name: Run Gitleaks scan and output SARIF
-        uses: gitleaks/gitleaks-action@v2
-        with:
-          args: detect --source . --report-format sarif --report-path gitleaks-results.sarif
+      # 2. Gitleaks'ı kur
+      - name: Install Gitleaks
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.10.0/gitleaks-linux-amd64 -o /usr/local/bin/gitleaks
+          chmod +x /usr/local/bin/gitleaks
 
+      # 3. Gitleaks taramasını yap ve SARIF formatında çıktı al
+      - name: Run Gitleaks scan and output SARIF
+        run: |
+          gitleaks detect --source . --report-format sarif --report-path gitleaks-results.sarif
+
+      # 4. Gitleaks sonuçlarını SARIF formatında artefakt olarak kaydet
       - name: Upload Gitleaks SARIF Results as Artifact
         uses: actions/upload-artifact@v4
         with:
