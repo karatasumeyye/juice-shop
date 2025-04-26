@@ -47,6 +47,7 @@ jobs:
 
   semgrep-scan:
     runs-on: ubuntu-latest
+    needs: build-and-sbom  # build-and-sbom job'unun tamamlanmasını bekler
 
     steps:
       # 1. Reposunu tekrar çek (separate job olduğu için tekrarlıyoruz)
