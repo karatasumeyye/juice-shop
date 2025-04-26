@@ -74,30 +74,26 @@ jobs:
 
   gitleaks-scan:
     runs-on: ubuntu-latest
-    
-
-    env:
-      GITLEAKS_SECRET: ${{ secrets.GITLEAKS_SECRET }}  # Gitleaks için secret
+    needs: semgrep-scan
 
     steps:
-      # 1. Reposunu tekrar çek (separate job olduğu için tekrarlıyoruz)
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Gitleaks'i pip ile kur
-      - name: Install Gitleaks
-        run: |
-          python -m pip install --upgrade pip
-          pip install gitleaks
+      - name: Run Gitleaks scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_ARTIFACT_UPLOAD: true
+          GITLEAKS_ARTIFACT_SUMMARY: true
+        continue-on-error: true
+        with:
+          scan-dir: .
+          fail: true
+          report-format: sarif
+          report-path: reports/gitleaks/gitleaks-results.sarif
 
-      # 3. Gitleaks taramasını yap ve SARIF formatında çıktı al
-      - name: Run Gitleaks scan and output SARIF
-        run: |
-          gitleaks detect --source . --report-format sarif --report-path gitleaks-results.sarif
-
-      # 4. Gitleaks sonuçlarını SARIF formatında artefakt olarak kaydet
       - name: Upload Gitleaks SARIF Results as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: gitleaks-sarif-results
-          path: gitleaks-results.sarif
+          path: reports/gitleaks/gitleaks-results.sarif
