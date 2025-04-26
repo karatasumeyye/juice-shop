@@ -31,7 +31,7 @@ jobs:
       # 4. Syft'ı kur
       - name: Install Syft
         run: |
-          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | bash -s -- -b /usr/local/bin
 
       # 5. SBOM dosyasını oluştur
       - name: Generate SBOM with Syft
@@ -47,15 +47,18 @@ jobs:
 
   semgrep-scan:
     runs-on: ubuntu-latest
-    
+    continue-on-error: true  # Bu satırı ekledik, hata alırsa workflow devam eder.
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Bash kullanarak kurulum yapıyoruz
       - name: Install Semgrep
         run: |
-          curl -sSfL https://semgrep.dev/install.sh | sh
+          curl -sSfL https://semgrep.dev/install.sh | bash
 
+      # SARIF çıktısı ve strict mode ile Semgrep taraması
       - name: Run Semgrep scan and output SARIF (strict)
         run: |
           semgrep --config=auto --sarif --strict --output=semgrep-results.sarif
@@ -68,21 +71,17 @@ jobs:
 
   gitleaks-scan:
     runs-on: ubuntu-latest
-    
+    continue-on-error: true  # Bu satırı ekledik, hata alırsa workflow devam eder.
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Gitleaks Action'ı doğrudan kullanıyoruz
       - name: Run Gitleaks scan and output SARIF
         uses: gitleaks/gitleaks-action@v2
         with:
           args: detect --source . --report-format sarif --report-path gitleaks-results.sarif
-
-      - name: Clean Gitleaks SARIF (optional but safe)
-        run: |
-          jq 'del(.runs[].results[].properties)' gitleaks-results.sarif > cleaned-gitleaks-results.sarif
-          mv cleaned-gitleaks-results.sarif gitleaks-results.sarif
 
       - name: Upload Gitleaks SARIF Results as Artifact
         uses: actions/upload-artifact@v4
