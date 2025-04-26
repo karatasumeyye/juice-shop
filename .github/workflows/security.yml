@@ -56,7 +56,8 @@ jobs:
       # Bash kullanarak kurulum yapıyoruz
       - name: Install Semgrep
         run: |
-          curl -sSfL https://semgrep.dev/install.sh | bash
+          curl -sSfL https://github.com/returntocorp/semgrep/releases/latest/download/semgrep-linux-amd64 -o /usr/local/bin/semgrep
+          chmod +x /usr/local/bin/semgrep
 
       # SARIF çıktısı ve strict mode ile Semgrep taraması
       - name: Run Semgrep scan and output SARIF (strict)
