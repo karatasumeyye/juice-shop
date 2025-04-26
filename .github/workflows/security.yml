@@ -44,3 +44,29 @@ jobs:
         with:
           name: juice-shop-sbom
           path: sbom.spdx.json
+
+
+semgrep-scan:
+  runs-on: ubuntu-latest
+
+    steps:
+      # 1. Reposunu tekrar çek (separate job olduğu için tekrarlıyoruz)
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Semgrep'i kur
+      - name: Install Semgrep
+        run: |
+          curl -sSfL https://semgrep.dev/install | sh
+
+      # 3. Semgrep taraması yap
+      - name: Run Semgrep scan
+        run: |
+          semgrep --config=auto --ignore-stdout > semgrep-results.json
+
+      # 4. Semgrep sonuçlarını artefakt olarak kaydet
+      - name: Upload Semgrep Results as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-results
+          path: semgrep-results.json
